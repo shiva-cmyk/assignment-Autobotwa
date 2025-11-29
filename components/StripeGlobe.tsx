@@ -28,7 +28,8 @@ export default function StripeGlobe() {
 
 // Wireframe globe structure
 function GlobeWireframe() {
-  const globeRef = useRef(null);
+  // explicit types so TypeScript knows `.current` is a mesh with a rotation
+  const globeRef = useRef<THREE.Mesh | null>(null);
 
   useFrame(() => {
     if (globeRef.current) {
@@ -56,13 +57,14 @@ function GlobeWireframe() {
 
 // World map made of particles
 function WorldMapParticles() {
-  const pointsRef = useRef(null);
+  // Three.js Points object
+  const pointsRef = useRef<THREE.Points | null>(null);
   const radius = 1.5;
-  
+
   const particles = useMemo(() => {
-    const positions = [];
-    const colors = [];
-    
+    const positions: number[] = [];
+    const colors: number[] = [];
+
     // North America
     addContinent(positions, colors, -100, 15, 50, 60, 1200);
     // South America
@@ -75,7 +77,7 @@ function WorldMapParticles() {
     addContinent(positions, colors, 70, 30, 100, 50, 1800);
     // Australia
     addContinent(positions, colors, 130, -25, 30, 20, 400);
-    
+
     // Sparse ocean dots
     for (let i = 0; i < 600; i++) {
       const lat = (Math.random() - 0.5) * 160;
@@ -84,28 +86,36 @@ function WorldMapParticles() {
       positions.push(pos.x, pos.y, pos.z);
       colors.push(0.15, 0.35, 0.55);
     }
-    
+
     return {
       positions: new Float32Array(positions),
       colors: new Float32Array(colors)
     };
   }, []);
 
-  function addContinent(positions, colors, lonStart, latStart, lonSpan, latSpan, count) {
+  function addContinent(
+    positions: number[],
+    colors: number[],
+    lonStart: number,
+    latStart: number,
+    lonSpan: number,
+    latSpan: number,
+    count: number
+  ) {
     for (let i = 0; i < count; i++) {
       const clusterLon = lonStart + Math.pow(Math.random(), 1.3) * lonSpan;
       const clusterLat = latStart + Math.pow(Math.random(), 1.3) * latSpan;
-      
+
       const pos = latLonToVector3(clusterLat, clusterLon, radius);
       positions.push(pos.x, pos.y, pos.z);
       colors.push(0.22, 0.75, 0.95);
     }
   }
 
-  function latLonToVector3(lat, lon, radius) {
+  function latLonToVector3(lat: number, lon: number, radius: number): THREE.Vector3 {
     const phi = (90 - lat) * (Math.PI / 180);
     const theta = (lon + 180) * (Math.PI / 180);
-    
+
     return new THREE.Vector3(
       -radius * Math.sin(phi) * Math.cos(theta),
       radius * Math.cos(phi),
@@ -123,18 +133,8 @@ function WorldMapParticles() {
   return (
     <points ref={pointsRef}>
       <bufferGeometry>
-        <bufferAttribute
-          attach="attributes-position"
-          count={particles.positions.length / 3}
-          array={particles.positions}
-          itemSize={3}
-        />
-        <bufferAttribute
-          attach="attributes-color"
-          count={particles.colors.length / 3}
-          array={particles.colors}
-          itemSize={3}
-        />
+        <bufferAttribute attach="attributes-position" args={[particles.positions, 3]} />
+        <bufferAttribute attach="attributes-color" args={[particles.colors, 3]} />
       </bufferGeometry>
       <pointsMaterial
         size={0.015}
@@ -149,12 +149,19 @@ function WorldMapParticles() {
 
 // Animated arcs with traveling points
 function AnimatedArcs({ count = 8 }) {
-  const group = useRef(null);
+  // Group for arcs
+  const group = useRef<THREE.Group | null>(null);
   const radius = 1.52;
-  
+
   const arcs = useMemo(() => {
-    const temp = [];
-    
+    const temp: Array<{
+      points: THREE.Vector3[];
+      curve: THREE.QuadraticBezierCurve3;
+      speed: number;
+      delay: number;
+      color: string;
+    }> = [];
+
     // Define meaningful city-to-city connections
     const connections = [
       { from: [40.7, -74], to: [51.5, -0.1] },      // NYC to London
@@ -166,19 +173,19 @@ function AnimatedArcs({ count = 8 }) {
       { from: [28.6, 77.2], to: [25.2, 55.2] },     // Delhi to Dubai
       { from: [-23.5, -46.6], to: [-34.6, -58.4] }, // Sao Paulo to Buenos Aires
     ];
-    
+
     const colors = ['#ec4899', '#06b6d4', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#3b82f6', '#f97316'];
-    
+
     connections.forEach((conn, i) => {
       const start = latLonToVector3(conn.from[0], conn.from[1], radius);
       const end = latLonToVector3(conn.to[0], conn.to[1], radius);
-      
+
       const mid = new THREE.Vector3().lerpVectors(start, end, 0.5);
       mid.normalize().multiplyScalar(radius * 1.25);
-      
+
       const curve = new THREE.QuadraticBezierCurve3(start, mid, end);
       const points = curve.getPoints(50);
-      
+
       temp.push({
         points,
         curve,
@@ -187,14 +194,14 @@ function AnimatedArcs({ count = 8 }) {
         color: colors[i]
       });
     });
-    
+
     return temp;
   }, [count]);
 
-  function latLonToVector3(lat, lon, radius) {
+  function latLonToVector3(lat: number, lon: number, radius: number): THREE.Vector3 {
     const phi = (90 - lat) * (Math.PI / 180);
     const theta = (lon + 180) * (Math.PI / 180);
-    
+
     return new THREE.Vector3(
       -radius * Math.sin(phi) * Math.cos(theta),
       radius * Math.cos(phi),
@@ -219,8 +226,7 @@ function AnimatedArcs({ count = 8 }) {
               <bufferAttribute
                 attach="attributes-position"
                 count={arc.points.length}
-                array={new Float32Array(arc.points.flatMap(p => [p.x, p.y, p.z]))}
-                itemSize={3}
+                args={[new Float32Array(arc.points.flatMap(p => [p.x, p.y, p.z])), 3]}
               />
             </bufferGeometry>
             <lineBasicMaterial
@@ -229,7 +235,7 @@ function AnimatedArcs({ count = 8 }) {
               opacity={0.3}
             />
           </line>
-          
+
           {/* Animated traveling point */}
           <TravelingPoint curve={arc.curve} speed={arc.speed} delay={arc.delay} color={arc.color} />
         </group>
@@ -239,26 +245,32 @@ function AnimatedArcs({ count = 8 }) {
 }
 
 // Single traveling point along a curve
-function TravelingPoint({ curve, speed, delay, color }) {
-  const meshRef = useRef(null);
+function TravelingPoint({ curve, speed, delay, color }: { curve: THREE.QuadraticBezierCurve3; speed: number; delay: number; color: string; }) {
+  // mesh ref — will be a Mesh with MeshBasicMaterial
+  const meshRef = useRef<THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial> | null>(null);
 
   useFrame((state) => {
     if (!meshRef.current) return;
-    
+
     const t = (state.clock.elapsedTime * speed - delay) % 4;
     const normalizedProgress = Math.max(0, Math.min(1, t / 4));
-    
+
     if (normalizedProgress > 0 && normalizedProgress < 1) {
       const point = curve.getPoint(normalizedProgress);
       meshRef.current.position.copy(point);
-      
+
       const opacity = Math.sin(normalizedProgress * Math.PI) * 0.9;
-      meshRef.current.material.opacity = opacity;
-      
+      // material is MeshBasicMaterial so it's safe to set opacity
+      if (meshRef.current && meshRef.current.material) {
+        (meshRef.current.material as THREE.MeshBasicMaterial).opacity = opacity;
+      }
+
       const scale = 1 + Math.sin(normalizedProgress * Math.PI) * 0.3;
-      meshRef.current.scale.setScalar(scale);
+      meshRef.current?.scale.setScalar(scale);
     } else {
-      meshRef.current.material.opacity = 0;
+      if (meshRef.current && meshRef.current.material) {
+        (meshRef.current.material as THREE.MeshBasicMaterial).opacity = 0;
+      }
     }
   });
 
@@ -273,4 +285,3 @@ function TravelingPoint({ curve, speed, delay, color }) {
     </mesh>
   );
 }
-

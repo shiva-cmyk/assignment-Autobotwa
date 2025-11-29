@@ -30,6 +30,10 @@ This project uses `next/font` to optimize and load the Geist font.
 
 The easiest way to deploy is with Vercel (recommended). See Next.js deploy docs for details: https://nextjs.org/docs/app/building-your-application/deploying
 
+### Live demo
+
+The current production demo is live at: https://assignment-autobotwa.vercel.app/
+
 ## Vercel v0 (AI-assisted) usage
 
 The following components were initially scaffolded using Vercel v0 (AI assistant), then reviewed and refined by the team:
